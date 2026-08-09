@@ -52,17 +52,16 @@ class AccountArVatLine(models.Model):
     other_taxes = fields.Monetary(readonly=True, currency_field="company_currency_id")
     total = fields.Monetary(readonly=True, currency_field="company_currency_id")
     state = fields.Selection([("draft", "Unposted"), ("posted", "Posted")], "Status", readonly=True)
-    journal_id = fields.Many2one("account.journal", "Journal", readonly=True, auto_join=True)
-    partner_id = fields.Many2one("res.partner", "Partner", readonly=True, auto_join=True)
+    journal_id = fields.Many2one("account.journal", "Journal", readonly=True)
+    partner_id = fields.Many2one("res.partner", "Partner", readonly=True)
     afip_responsibility_type_id = fields.Many2one(
         "l10n_ar.afip.responsibility.type",
         string="AFIP Responsibility Type",
         readonly=True,
-        auto_join=True,
     )
-    company_id = fields.Many2one("res.company", "Company", readonly=True, auto_join=True)
+    company_id = fields.Many2one("res.company", "Company", readonly=True)
     company_currency_id = fields.Many2one(related="company_id.currency_id", readonly=True)
-    move_id = fields.Many2one("account.move", string="Entry", auto_join=True)
+    move_id = fields.Many2one("account.move", string="Entry")
 
     def open_journal_entry(self):
         self.ensure_one()

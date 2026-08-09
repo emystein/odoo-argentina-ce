@@ -14,6 +14,7 @@ import odoo.tools as tools
 import pytz
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+import odoo.tools as tools
 
 _logger = logging.getLogger(__name__)
 
@@ -25,13 +26,11 @@ class ResCompany(models.Model):
         "afipws.certificate_alias",
         "company_id",
         "Aliases",
-        auto_join=True,
     )
     connection_ids = fields.One2many(
         "afipws.connection",
         "company_id",
         "Connections",
-        auto_join=True,
     )
 
     @api.model
@@ -206,10 +205,10 @@ class ResCompany(models.Model):
 
         # make md5 hash of the parameter for caching...
         fn = "%s.xml" % hashlib.md5((service + certificate + private_key).encode("utf-8")).hexdigest()
-        if cache:
-            fn = os.path.join(cache, fn)
-        else:
-            fn = os.path.join(wsaa.InstallDir, "cache", fn)
+        if not cache:
+            cache = os.path.join(tools.config['data_dir'], 'pyafipws_cache')
+            os.makedirs(cache, exist_ok=True)
+        fn = os.path.join(cache, fn)
 
         try:
             # read the access ticket (if already authenticated)

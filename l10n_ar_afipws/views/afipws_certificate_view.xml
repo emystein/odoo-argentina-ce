@@ -27,6 +27,7 @@
                 </header>
                 <sheet string="AFIP Certificates">
                     <group>
+                        <field name="alias_id" readonly="state != 'draft'"/>
                         <field name="csr" groups="base.group_no_one" readonly="state != 'draft'"/>
                         <field name="request_filename" invisible="1"/>
                         <field name="request_file" readonly="state != 'draft'" filename="request_filename"/>
@@ -42,6 +43,7 @@
         <field name="model">afipws.certificate</field>
         <field name="arch" type="xml">
             <list string="AFIP Certificates">
+                <field name="alias_id"/>
                 <field name="create_date"/>
                 <field name="state"/>
             </list>

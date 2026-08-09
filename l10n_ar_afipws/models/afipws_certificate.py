@@ -25,7 +25,6 @@ class AfipwsCertificate(models.Model):
         ondelete="cascade",
         string="Certificate Alias",
         required=True,
-        auto_join=True,
         index=True,
     )
     csr = fields.Text(

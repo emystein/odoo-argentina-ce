@@ -6,6 +6,8 @@ import logging
 
 from odoo import _, api, fields, models
 from odoo.exceptions import RedirectWarning, UserError
+import odoo.tools as tools
+import os
 
 _logger = logging.getLogger(__name__)
 
@@ -21,7 +23,6 @@ class AfipwsConnection(models.Model):
         "Company",
         required=True,
         index=True,
-        auto_join=True,
     )
     uniqueid = fields.Char(
         "Unique ID",
@@ -135,11 +136,19 @@ class AfipwsConnection(models.Model):
         # cache = cfg.get_param(cr, uid, 'pyafipws.cache', context=context)
         # proxy = cfg.get_param(cr, uid, 'pyafipws.proxy', context=context)
 
+        # pyafipws defaults to a `cache/` directory inside its own package,
+        # which is not writable in production installs.  Point it to Odoo's
+        # data_dir instead so the WSDL cache lands somewhere the odoo user
+        # can write to.
+        cache = os.path.join(tools.config['data_dir'], 'pyafipws_cache')
+        os.makedirs(cache, exist_ok=True)
+        proxy = ""
+
         wsdl = self.afip_ws_url
 
         # connect to the webservice and call to the test method
         try:
-            ws.Conectar("", wsdl or "", "")
+            ws.Conectar(cache, wsdl or "", proxy)
         except Exception as error:
             if (
                 "ExpatError" in repr(error)
