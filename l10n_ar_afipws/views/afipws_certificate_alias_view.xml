@@ -5,21 +5,25 @@
         <field name="name">afipws.certificate_alias.form</field>
         <field name="model">afipws.certificate_alias</field>
         <field name="arch" type="xml">
-            <form string="AFIP Certificates">
+            <form string="Certificados ARCA">
                 <field name="service_type" invisible="1"/>
 
                 <header>
+                    <button name="%(action_upload_certificate)d" type="action"
+                        string="Cargar certificado" class="oe_highlight"
+                        invisible="state == 'cancel'"/>
+
                     <button name="action_confirm"
                         type="object"
                         invisible="state != 'draft'"
-                        string="Confirm"
+                        string="Generar clave privada"
                         class="oe_highlight"
                         help="Confirm and generate Key"/>
                     <button name="action_create_certificate_request"
                         type="object"
                         invisible="state != 'confirmed'"
                         class="oe_highlight"
-                        string="Create Certificate Request"/>
+                        string="Generar solicitud de certificado (CSR)"/>
                     <button name="action_cancel"
                         type="object"
                         invisible="state not in ('draft', 'confirmed')"
@@ -30,7 +34,14 @@
                         string="To Draft"/>
                     <field name="state" widget="statusbar"/>
                 </header>
-                <sheet string="AFIP Certificates">
+                <sheet string="Certificados ARCA">
+                    <div class="alert alert-info" role="alert" invisible="state == 'cancel'">
+                        <b>Certificados AFIP/ARCA</b><br/>
+                        Si ya tenés un certificado y su clave privada, usá <b>Cargar certificado</b>.
+                        Para solicitar uno nuevo o renovarlo, completá los datos, generá la clave privada
+                        y luego la solicitud CSR. Descargá el CSR, subilo a ARCA en
+                        <i>Administración de Certificados Digitales</i> y cargá aquí el .crt firmado.
+                    </div>
                     <group>
                         <group>
                             <field name="company_id" readonly="state != 'draft'" groups="base.group_multi_company"/>
@@ -47,10 +58,10 @@
                         </group>
                     </group>
                     <notebook>
-                        <page string="Ceritificates">
+                        <page string="Certificados">
                             <field name="certificate_ids"/>
                         </page>
-                        <page string="Key" groups="base.group_no_one">
+                        <page string="Clave privada" groups="base.group_no_one">
                             <field name="key" readonly="state != 'draft'"/>
                         </page>
                     </notebook>
@@ -63,7 +74,7 @@
         <field name="name">afipws.certificate_alias.filter</field>
         <field name="model">afipws.certificate_alias</field>
         <field name="arch" type="xml">
-            <search string="AFIP Certificates">
+            <search string="Certificados ARCA">
                 <field name="type"/>
                 <field name="common_name"/>
                 <field name="company_id"/>
@@ -76,7 +87,7 @@
         <field name="name">afipws.certificate_alias.list</field>
         <field name="model">afipws.certificate_alias</field>
         <field name="arch" type="xml">
-            <list string="AFIP Certificates">
+            <list string="Certificados ARCA">
                 <field name="type"/>
                 <field name="common_name"/>
                 <field name="company_id"/>
@@ -86,7 +97,7 @@
     </record>
 
     <record model="ir.actions.act_window" id="act_afipws_certificate_alias">
-        <field name="name">AFIP Certificate</field>
+        <field name="name">Certificados ARCA</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">afipws.certificate_alias</field>
         <field name="view_mode">list,form</field>

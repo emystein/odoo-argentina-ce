@@ -4,23 +4,30 @@
         <field name="name">afipws.upload_certificate.wizard.form</field>
         <field name="model">afipws.upload_certificate.wizard</field>
         <field name="arch" type="xml">
-            <form string="Upload Certificate">
+            <form string="Cargar certificado ARCA">
+                <div class="alert alert-info" role="alert">
+                    Cargá el certificado <b>.crt</b> emitido por ARCA.
+                    Si generaste la solicitud en Odoo, la clave privada ya está guardada.
+                    Si la generaste fuera de Odoo, adjuntá también la clave <b>.key</b> correspondiente.
+                </div>
                 <group>
                     <field name="certificate_id" invisible="1"/>
-                    <field name="certificate_file"/>
-                    <field name="certificate_key_file"/>
+                    <field name="alias_id" invisible="1"/>
+                    <field name="certificate_filename" invisible="1"/>
+                    <field name="certificate_key_filename" invisible="1"/>
+                    <field name="certificate_file" string="Certificado (.crt)" filename="certificate_filename" options="{'accepted_file_extensions': '.crt,.pem,.cer'}"/>
+                    <field name="certificate_key_file" string="Clave privada (.key, opcional)" filename="certificate_key_filename" options="{'accepted_file_extensions': '.key,.pem'}"/>
                 </group>
                 <footer>
-                    <button name="action_confirm" string="Confirm" type="object" class="oe_highlight"/>
-                    or
-                    <button string="Cancel" class="oe_link" special="cancel"/>
+                    <button name="action_confirm" string="Cargar y confirmar" type="object" class="oe_highlight"/>
+                    <button string="Cancelar" class="oe_link" special="cancel"/>
                 </footer>
             </form>
         </field>
     </record>
 
     <record id="action_upload_certificate" model="ir.actions.act_window">
-        <field name="name">AFIP WS - Upload Certificate</field>
+        <field name="name">ARCA - Cargar certificado</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">afipws.upload_certificate.wizard</field>
         <field name="view_id" ref="view_upload_certificate_form"/>

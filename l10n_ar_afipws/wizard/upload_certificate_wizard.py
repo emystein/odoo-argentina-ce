@@ -4,7 +4,8 @@
 ##############################################################################
 import base64
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 
 class L10nArAfipwsUploadCertificate(models.TransientModel):
@@ -27,7 +28,6 @@ class L10nArAfipwsUploadCertificate(models.TransientModel):
 
     certificate_id = fields.Many2one(
         "afipws.certificate",
-        required=True,
         readonly=True,
         default=_default_certificate,
         ondelete="cascade",
@@ -38,6 +38,9 @@ class L10nArAfipwsUploadCertificate(models.TransientModel):
         default=_default_alias,
         ondelete='cascade',
     )
+    certificate_filename = fields.Char()
+    certificate_key_filename = fields.Char()
+
     certificate_file = fields.Binary("Upload Certificate", required=True)
     certificate_key_file = fields.Binary(
         'Upload Private Key',
@@ -48,6 +51,8 @@ class L10nArAfipwsUploadCertificate(models.TransientModel):
     def action_confirm(self):
         self.ensure_one()
         alias = self.alias_id or self.certificate_id.alias_id
+        if not alias:
+            raise UserError(_("Seleccioná un alias para cargar el certificado."))
         if self.certificate_key_file:
             alias.write(
                 {'key': base64.decodebytes(self.certificate_key_file)})
@@ -65,5 +70,9 @@ class L10nArAfipwsUploadCertificate(models.TransientModel):
         else:
             certificate.write(
                 {'crt': base64.decodebytes(self.certificate_file)})
+        if not alias.key:
+            raise UserError(_("Cargá la clave privada correspondiente al certificado."))
+        if alias.state != "confirmed":
+            alias.action_confirm()
         certificate.action_confirm()
         return True

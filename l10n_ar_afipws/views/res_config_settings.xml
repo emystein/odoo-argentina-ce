@@ -1,19 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-        <record id="res_config_settings_view_form" model="ir.ui.view">
-            <field name="name">res.config.settings.view.form.inherit.account</field>
-            <field name="model">res.config.settings</field>
-            <field eval="40" name="priority"/>
-            <field name="inherit_id" ref="account.res_config_settings_view_form"/>
-            <field name="arch" type="xml">
-                <xpath expr="//block[@id='invoicing_settings']" position="inside">
-                    <setting type="header" string="AFIP WS" help="Configure AFIP web services">
-                        <button class="btn-link" icon="fa-arrow-right" name="%(l10n_ar_afipws.act_afipws_certificate_alias)d" string="List certificates" type="action"/>
-                        <button class="btn-link" icon="fa-arrow-right" name="%(l10n_ar_afipws.act_afipws_auth)d" string="List conections" type="action"/>
-                        <label for="afip_ws_env_type"/>
-                        <field class="font-weight-bold" name="afip_ws_env_type"/>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.account</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="40"/>
+        <field name="inherit_id" ref="account.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='account']" position="inside">
+                <block title="Localización para Argentina" name="l10n_ar_arca_block" invisible="country_code != 'AR'">
+                    <setting string="Webservices de ARCA" help="Configuración del entorno y certificado AFIP/ARCA para emisión electrónica. El entorno se aplica a todas las empresas.">
+                        <field name="afip_ws_env_type" class="o_light_label" widget="radio"/>
+                        <div class="content-group">
+                            <div class="d-flex align-items-center mt8">
+                                <label for="arca_certificate_id" string="Certificado" class="o_light_label col-lg-3"/>
+                                <field name="arca_certificate_id" readonly="1"/>
+                            </div>
+                            <div class="mt16">
+                                <button name="action_arca_certificates" type="object" icon="oi-arrow-right" class="oe_link oe_inline" string="Administrar y cargar certificados"/>
+                            </div>
+                            <div class="mt16">
+                                <button name="action_arca_connections" type="object" icon="oi-arrow-right" class="oe_link oe_inline" string="Conexiones de prueba"/>
+                            </div>
+                            <div class="mt16">
+                                <button name="action_arca_certificate_request" type="object" icon="oi-arrow-right" class="oe_link oe_inline" string="Generar solicitud de renovación"/>
+                            </div>
+                            <div class="mt16">
+                                <a href="https://www.afip.gob.ar/ws/WSAA/WSAA.ObtenerCertificado.pdf" target="_blank" rel="noopener noreferrer">¿Cómo obtener un certificado para producción?</a>
+                            </div>
+                        </div>
                     </setting>
-                </xpath>
-            </field>
-        </record>
+                </block>
+            </xpath>
+        </field>
+    </record>
 </odoo>

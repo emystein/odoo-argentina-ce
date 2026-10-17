@@ -168,6 +168,7 @@ class AfipwsCertificateAlias(models.Model):
         """
         TODO agregar descripcion y ver si usamos pyafipsw para generar esto
         """
+        self.ensure_one()
         for record in self:
             req = crypto.X509Req()
             req.get_subject().C = self.country_id.code.encode("ascii", "ignore")
@@ -177,7 +178,7 @@ class AfipwsCertificateAlias(models.Model):
             req.get_subject().O = self.company_id.name.encode("ascii", "ignore")
             req.get_subject().OU = self.department.encode("ascii", "ignore")
             req.get_subject().CN = self.common_name.encode("ascii", "ignore")
-            req.get_subject().serialNumber = "CUIT %s" % self.cuit.encode("ascii", "ignore")
+            req.get_subject().serialNumber = "CUIT %s" % self.cuit
             k = crypto.load_privatekey(crypto.FILETYPE_PEM, self.key)
             self.key = crypto.dump_privatekey(crypto.FILETYPE_PEM, k)
             req.set_pubkey(k)
@@ -187,8 +188,15 @@ class AfipwsCertificateAlias(models.Model):
                 "csr": csr,
                 "alias_id": record.id,
             }
-            self.certificate_ids.create(vals)
-        return True
+            certificate = self.env["afipws.certificate"].create(vals)
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Solicitud de certificado ARCA"),
+            "res_model": "afipws.certificate",
+            "res_id": certificate.id,
+            "view_mode": "form",
+            "target": "current",
+        }
 
     @api.constrains("common_name")
     def check_common_name_len(self):
