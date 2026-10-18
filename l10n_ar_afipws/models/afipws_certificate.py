@@ -9,6 +9,8 @@ from OpenSSL import crypto
 import base64
 import logging
 
+from ..tools.private_key_certificate_pair import PrivateKeyCertificatePair
+
 _logger = logging.getLogger(__name__)
 
 
@@ -126,3 +128,7 @@ class AfipwsCertificate(models.Model):
         else:
             certificate = None
         return certificate
+
+    def private_key_cert_pair(self):
+        self.ensure_one()
+        return PrivateKeyCertificatePair(self.alias_id.key, self.crt)

@@ -16,6 +16,8 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 import odoo.tools as tools
 
+from ..tools.private_key_certificate_pair import PrivateKeyCertificatePair
+
 _logger = logging.getLogger(__name__)
 
 
@@ -68,9 +70,23 @@ class ResCompany(models.Model):
         * en registros de esta misma clase
         """
         self.ensure_one()
-        pkey = False
-        cert = False
-        msg = False
+        key_and_certificate = PrivateKeyCertificatePair.empty()
+        certificate = self.find_confirmed_afip_certificate(environment_type)
+        if certificate:
+            key_and_certificate = certificate.private_key_cert_pair()
+            _logger.info("Using DB certificates")
+        # not certificate on bd, we search on odoo conf file
+        else:
+            pkey = self._read_afip_pkey_file_referenced_in_conf(environment_type)
+            cert = self._read_afip_cert_file_referenced_in_conf(environment_type)
+            key_and_certificate = PrivateKeyCertificatePair(pkey, cert)
+            _logger.info("Using odoo conf certificates")
+        if key_and_certificate.is_empty():
+            msg = _("Not confirmed certificate for %s on company %s") % (environment_type, self.name)
+            raise UserError(msg)
+        return key_and_certificate.as_tuple()
+
+    def find_confirmed_afip_certificate(self, environment_type):
         certificate = self.env["afipws.certificate"].search(
             [
                 ("alias_id.company_id", "=", self.id),
@@ -78,8 +94,6 @@ class ResCompany(models.Model):
                 ("state", "=", "confirmed"),
             ]
         )
-        # to avoid confusion on the user, if more than one certificate found,
-        # we ask to keep the one he whants to use
         if len(certificate) > 1:
             raise UserError(
                 _(
@@ -88,39 +102,7 @@ class ResCompany(models.Model):
                 )
                 % (environment_type, environment_type)
             )
-        if certificate:
-            pkey = certificate.alias_id.key
-            cert = certificate.crt
-            _logger.info("Using DB certificates")
-        # not certificate on bd, we search on odo conf file
-        else:
-            msg = _("Not confirmed certificate for %s on company %s") % (
-                environment_type,
-                self.name,
-            )
-            pkey_path = False
-            cert_path = False
-            if environment_type == "production":
-                pkey_path = tools.config.get("afip_prod_pkey_file")
-                cert_path = tools.config.get("afip_prod_cert_file")
-            else:
-                pkey_path = tools.config.get("afip_homo_pkey_file")
-                cert_path = tools.config.get("afip_homo_cert_file")
-            if pkey_path and cert_path:
-                try:
-                    if os.path.isfile(pkey_path) and os.path.isfile(cert_path):
-                        with open(pkey_path) as pkey_file:
-                            pkey = pkey_file.read()
-                        with open(cert_path) as cert_file:
-                            cert = cert_file.read()
-                    msg = "Could not find %s or %s files" % (pkey_path, cert_path)
-                except Exception:
-                    msg = "Could not read %s or %s files" % (pkey_path, cert_path)
-                else:
-                    _logger.info("Using odoo conf certificates")
-        if not pkey or not cert:
-            raise UserError(msg)
-        return (pkey, cert)
+        return certificate
 
     def get_connection(self, afip_ws):
         self.ensure_one()
@@ -252,3 +234,28 @@ class ResCompany(models.Model):
             "token": token,
             "sign": sign,
         }
+
+    @api.model
+    def _read_afip_pkey_file_referenced_in_conf(self, environment_type):
+        return self._read_afip_file_of_type(environment_type, "pkey")
+
+    @api.model
+    def _read_afip_cert_file_referenced_in_conf(self, environment_type):
+        return self._read_afip_file_of_type(environment_type, "cert")
+
+    @api.model
+    def _read_afip_file_of_type(self, environment_type, file_type):
+        env = "prod" if environment_type == "production" else "homo"
+        path = tools.config.get("afip_" + env + "_" + file_type + "_file")
+        return self._read_file(path)
+
+    @api.model
+    def _read_file(self, path):
+        if path:
+            try:
+                if os.path.isfile(path):
+                    with open(path) as file:
+                        return file.read()
+            except Exception as error:
+                raise UserError("Could not read %s file" % path) from error
+        return False

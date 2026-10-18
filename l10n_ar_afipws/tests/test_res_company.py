@@ -93,14 +93,22 @@ class TestResCompany(common.AfipwsCase):
                 key, cert = Path(directory) / 'key', Path(directory) / 'cert'
                 config = {prefix + '_pkey_file': str(key), prefix + '_cert_file': str(cert)}
                 with patch.object(res_company.tools, 'config', config):
-                    with self.assertRaisesRegex(UserError, 'Could not find'):
+                    with self.assertRaisesRegex(UserError, 'Not confirmed certificate'):
                         self.company.get_key_and_certificate(environment)
                     key.write_text('private key')
                     cert.write_text('certificate')
                     self.assertEqual(self.company.get_key_and_certificate(environment), ('private key', 'certificate'))
-                    with patch('builtins.open', side_effect=PermissionError('denied')), \
-                            self.assertRaisesRegex(UserError, 'Could not read'):
-                        self.company.get_key_and_certificate(environment)
+                    real_open = open
+                    for unreadable_path in (key, cert):
+                        def open_file(path, *args, **kwargs):
+                            if Path(path) == unreadable_path:
+                                raise PermissionError('denied')
+                            return real_open(path, *args, **kwargs)
+
+                        with self.subTest(unreadable_path=unreadable_path), \
+                                patch('builtins.open', side_effect=open_file), \
+                                self.assertRaisesRegex(UserError, 'Could not read %s file' % unreadable_path):
+                            self.company.get_key_and_certificate(environment)
         with patch.object(res_company.tools, 'config', {}), self.assertRaises(UserError):
             self.company.get_key_and_certificate('homologation')
 
