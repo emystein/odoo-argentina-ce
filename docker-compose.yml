@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo_test
+      POSTGRES_DB: postgres
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  tests:
+    image: odoo-argentina-ce-tests:19
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/mnt/extra-addons:ro
+      - ${COVERAGE_DIR:-./coverage}:/coverage
+    environment:
+      HOME: /tmp
+      ODOO_BIN: /usr/bin/odoo
+      PYTHON_BIN: python3
+      TEST_DB: ${TEST_DB:-}
+    entrypoint: ["/bin/bash", "/mnt/extra-addons/scripts/run-module-tests.sh"]

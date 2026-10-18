@@ -5,10 +5,7 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
-try:
-    from OpenSSL import crypto
-except ImportError:
-    crypto = None
+from OpenSSL import crypto
 import base64
 import logging
 
@@ -117,7 +114,7 @@ class AfipwsCertificate(models.Model):
             try:
                 certificate = crypto.load_certificate(crypto.FILETYPE_PEM, self.crt.encode("ascii"))
             except Exception as e:
-                if "Expecting: CERTIFICATE" in e[0]:
+                if "Expecting: CERTIFICATE" in str(e):
                     raise UserError(
                         _(
                             "Wrong Certificate file format.\nBe sure you have "
@@ -125,7 +122,7 @@ class AfipwsCertificate(models.Model):
                         )
                     )
                 else:
-                    raise UserError(_("Unknown error.\nX509 return this message:\n %s") % (e[0]))
+                    raise UserError(_("Unknown error.\nX509 return this message:\n %s") % (str(e)))
         else:
             certificate = None
         return certificate

@@ -14,16 +14,16 @@ class L10nArAfipwsUploadCertificate(models.TransientModel):
 
     @api.model
     def _default_certificate(self):
-        if self._context.get('active_model') == 'afipws.certificate':
+        if self.env.context.get('active_model') == 'afipws.certificate':
             return self.env['afipws.certificate'].browse(
-                self._context.get('active_id'))
+                self.env.context.get('active_id'))
         return False
 
     @api.model
     def _default_alias(self):
-        if self._context.get('active_model') == 'afipws.certificate_alias':
+        if self.env.context.get('active_model') == 'afipws.certificate_alias':
             return self.env['afipws.certificate_alias'].browse(
-                self._context.get('active_id'))
+                self.env.context.get('active_id'))
         return False
 
     certificate_id = fields.Many2one(

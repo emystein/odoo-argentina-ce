@@ -5,10 +5,7 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
-try:
-    from OpenSSL import crypto
-except ImportError:
-    crypto = None
+from OpenSSL import crypto
 import logging
 
 _logger = logging.getLogger(__name__)

@@ -243,7 +243,7 @@ class ResCompany(models.Model):
                 err_msg = wsaa.Excepcion
             else:
                 # avoid encoding problem when reporting exceptions to the user:
-                err_msg = traceback.format_exception_only(sys.exc_type, sys.exc_value)[0]
+                err_msg = traceback.format_exception_only(*sys.exc_info()[:2])[0]
             raise UserError(_("Could not connect. This is the what we received: %s") % (err_msg))
         return {
             "uniqueid": uniqueId,

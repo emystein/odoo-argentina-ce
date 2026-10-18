@@ -96,3 +96,6 @@ Temporary Items
 ### macOS Patch ###
 # iCloud generated files
 *.icloud
+
+# Module test coverage artifacts
+coverage/
