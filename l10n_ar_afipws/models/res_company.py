@@ -16,7 +16,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 import odoo.tools as tools
 
-from ..tools.private_key_certificate_pair import PrivateKeyCertificatePair
+from ..tools.key_and_certificate import KeyAndCertificate
 
 _logger = logging.getLogger(__name__)
 
@@ -70,16 +70,16 @@ class ResCompany(models.Model):
         * en registros de esta misma clase
         """
         self.ensure_one()
-        key_and_certificate = PrivateKeyCertificatePair.empty()
+        key_and_certificate = KeyAndCertificate.empty()
         certificate = self.find_confirmed_afip_certificate(environment_type)
         if certificate:
-            key_and_certificate = certificate.private_key_cert_pair()
+            key_and_certificate = certificate.key_and_certificate()
             _logger.info("Using DB certificates")
         # not certificate on bd, we search on odoo conf file
         else:
-            pkey = self._read_afip_pkey_file_referenced_in_conf(environment_type)
-            cert = self._read_afip_cert_file_referenced_in_conf(environment_type)
-            key_and_certificate = PrivateKeyCertificatePair(pkey, cert)
+            pkey = self.read_afip_pkey_file_referenced_in_conf(environment_type)
+            cert = self.read_afip_cert_file_referenced_in_conf(environment_type)
+            key_and_certificate = KeyAndCertificate(pkey, cert)
             _logger.info("Using odoo conf certificates")
         if key_and_certificate.is_empty():
             msg = _("Not confirmed certificate for %s on company %s") % (environment_type, self.name)
@@ -235,21 +235,17 @@ class ResCompany(models.Model):
             "sign": sign,
         }
 
-    @api.model
-    def _read_afip_pkey_file_referenced_in_conf(self, environment_type):
-        return self._read_afip_file_of_type(environment_type, "pkey")
+    def read_afip_pkey_file_referenced_in_conf(self, environment_type):
+        return self.read_afip_file_of_type(environment_type, "pkey")
 
-    @api.model
-    def _read_afip_cert_file_referenced_in_conf(self, environment_type):
-        return self._read_afip_file_of_type(environment_type, "cert")
+    def read_afip_cert_file_referenced_in_conf(self, environment_type):
+        return self.read_afip_file_of_type(environment_type, "cert")
 
-    @api.model
-    def _read_afip_file_of_type(self, environment_type, file_type):
+    def read_afip_file_of_type(self, environment_type, file_type):
         env = "prod" if environment_type == "production" else "homo"
         path = tools.config.get("afip_" + env + "_" + file_type + "_file")
         return self._read_file(path)
 
-    @api.model
     def _read_file(self, path):
         if path:
             try:
