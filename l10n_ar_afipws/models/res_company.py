@@ -71,38 +71,19 @@ class ResCompany(models.Model):
         """
         self.ensure_one()
         key_and_certificate = KeyAndCertificate.empty()
-        certificate = self.find_confirmed_afip_certificate(environment_type)
+        certificate_repository = self.afip_certificate_repository()
+        certificate = certificate_repository.find_confirmed_by_company_id_and_environment(self.id, environment_type)
         if certificate:
             key_and_certificate = certificate.key_and_certificate()
             _logger.info("Using DB certificates")
         # not certificate on bd, we search on odoo conf file
         else:
-            pkey = self.read_afip_pkey_file_referenced_in_conf(environment_type)
-            cert = self.read_afip_cert_file_referenced_in_conf(environment_type)
-            key_and_certificate = KeyAndCertificate(pkey, cert)
+            key_and_certificate = KeyAndCertificate.from_environment_configuration(environment_type)
             _logger.info("Using odoo conf certificates")
         if key_and_certificate.is_empty():
             msg = _("Not confirmed certificate for %s on company %s") % (environment_type, self.name)
             raise UserError(msg)
         return key_and_certificate.as_tuple()
-
-    def find_confirmed_afip_certificate(self, environment_type):
-        certificate = self.env["afipws.certificate"].search(
-            [
-                ("alias_id.company_id", "=", self.id),
-                ("alias_id.type", "=", environment_type),
-                ("state", "=", "confirmed"),
-            ]
-        )
-        if len(certificate) > 1:
-            raise UserError(
-                _(
-                    'Tiene más de un certificado de "%s" confirmado. Por favor '
-                    'deje un solo certificado de "%s" confirmado.'
-                )
-                % (environment_type, environment_type)
-            )
-        return certificate
 
     def get_connection(self, afip_ws):
         self.ensure_one()
@@ -235,23 +216,6 @@ class ResCompany(models.Model):
             "sign": sign,
         }
 
-    def read_afip_pkey_file_referenced_in_conf(self, environment_type):
-        return self.read_afip_file_of_type(environment_type, "pkey")
+    def afip_certificate_repository(self):
+        return self.env["afipws.certificate"]
 
-    def read_afip_cert_file_referenced_in_conf(self, environment_type):
-        return self.read_afip_file_of_type(environment_type, "cert")
-
-    def read_afip_file_of_type(self, environment_type, file_type):
-        env = "prod" if environment_type == "production" else "homo"
-        path = tools.config.get("afip_" + env + "_" + file_type + "_file")
-        return self._read_file(path)
-
-    def _read_file(self, path):
-        if path:
-            try:
-                if os.path.isfile(path):
-                    with open(path) as file:
-                        return file.read()
-            except Exception as error:
-                raise UserError("Could not read %s file" % path) from error
-        return False

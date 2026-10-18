@@ -132,3 +132,18 @@ class AfipwsCertificate(models.Model):
     def key_and_certificate(self):
         self.ensure_one()
         return KeyAndCertificate(self.alias_id.key, self.crt)
+
+    def find_confirmed_by_company_id_and_environment(self, company_id, environment):
+        certificate = self.search(
+            [
+                ("state", "=", "confirmed"),
+                ("alias_id.company_id", "=", company_id),
+                ("alias_id.type", "=", environment),
+            ]
+        )
+        if len(certificate) > 1:
+            raise UserError(
+                _('Tiene más de un certificado de "%s" confirmado. Por favor deje un solo certificado de "%s" confirmado.')
+                % (environment, environment)
+            )
+        return certificate
