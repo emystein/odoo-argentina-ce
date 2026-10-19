@@ -33,3 +33,8 @@ class AfipEnvironment:
 
     def __init__(self, type):
         self.type = type
+
+    def __eq__(self, other):
+        if not isinstance(other, AfipEnvironment):
+            return NotImplemented
+        return self.type == other.type

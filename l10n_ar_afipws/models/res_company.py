@@ -40,12 +40,9 @@ class ResCompany(models.Model):
     def get_environment(self):
         return AfipEnvironment.with_parameter_repository(self.parameter_repository())
 
-    def parameter_repository(self):
-        return self.env["ir.config_parameter"]
-
-    def get_key_and_certificate(self, environment_type):
+    def get_key_and_certificate(self, environment):
         """
-        Funcion que busca para el environment_type definido,
+        Funcion que busca para el environment definido,
         una clave y un certificado en los siguientes lugares y segun estas
         prioridades:
         * en el conf del server de odoo
@@ -54,16 +51,16 @@ class ResCompany(models.Model):
         self.ensure_one()
         key_and_certificate = KeyAndCertificate.empty()
         certificate_repository = self.afip_certificate_repository()
-        certificate = certificate_repository.find_confirmed_by_company_id_and_environment(self.id, environment_type)
+        certificate = certificate_repository.find_confirmed_by_company_id_and_environment(self.id, environment)
         if certificate:
             key_and_certificate = certificate.key_and_certificate()
             _logger.info("Using DB certificates")
         # not certificate on bd, we search on odoo conf file
         else:
-            key_and_certificate = KeyAndCertificate.from_environment_configuration(environment_type)
+            key_and_certificate = KeyAndCertificate.from_environment_configuration(environment)
             _logger.info("Using odoo conf certificates")
         if key_and_certificate.is_empty():
-            msg = _("Not confirmed certificate for %s on company %s") % (environment_type, self.name)
+            msg = _("Not confirmed certificate for %s on company %s") % (environment.type, self.name)
             raise UserError(msg)
         return key_and_certificate.as_tuple()
 
@@ -84,10 +81,10 @@ class ResCompany(models.Model):
             limit=1,
         )
         if not connection:
-            connection = self._create_connection(afip_ws, environment.type)
+            connection = self._create_connection(afip_ws, environment)
         return connection
 
-    def _create_connection(self, afip_ws, environment_type):
+    def _create_connection(self, afip_ws, environment):
         """
         This function should be called from get_connection. Not to be used
         directyl
@@ -96,10 +93,10 @@ class ResCompany(models.Model):
         self.ensure_one()
         _logger.info(
             "Creating connection for company %s, environment type %s and ws "
-            "%s" % (self.name, environment_type, afip_ws)
+            "%s" % (self.name, environment.type, afip_ws)
         )
-        login_url = self.env["afipws.connection"].get_afip_login_url(environment_type)
-        pkey, cert = self.get_key_and_certificate(environment_type)
+        login_url = self.env["afipws.connection"].get_afip_login_url(environment.type)
+        pkey, cert = self.get_key_and_certificate(environment)
         # because pyafipws wsaa loos for "BEGIN RSA PRIVATE KEY" we change key
         if pkey.startswith("-----BEGIN PRIVATE KEY-----"):
             pkey = pkey.replace(" PRIVATE KEY", " RSA PRIVATE KEY")
@@ -108,7 +105,7 @@ class ResCompany(models.Model):
             {
                 "company_id": self.id,
                 "afip_ws": afip_ws,
-                "type": environment_type,
+                "type": environment.type,
             }
         )
 
@@ -197,6 +194,9 @@ class ResCompany(models.Model):
             "token": token,
             "sign": sign,
         }
+
+    def parameter_repository(self):
+        return self.env["ir.config_parameter"]
 
     def afip_certificate_repository(self):
         return self.env["afipws.certificate"]

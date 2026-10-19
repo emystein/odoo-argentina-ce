@@ -7,8 +7,8 @@ class KeyAndCertificate():
         return KeyAndCertificate(None, None)
 
     @staticmethod
-    def from_environment_configuration(environment_type):
-        parameters = AfipConfigurationParameters.for_environment(environment_type)
+    def from_environment_configuration(environment):
+        parameters = AfipConfigurationParameters.for_environment(environment)
         pkey_path = parameters.file_path_for_file_type("pkey")
         cert_path = parameters.file_path_for_file_type("cert")
         return KeyAndCertificate.from_paths(pkey_path, cert_path)

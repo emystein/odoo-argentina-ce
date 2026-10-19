@@ -11,6 +11,7 @@ from odoo.tests import tagged
 
 from . import common
 from ..models import res_company
+from ..tools.afip_environment import AfipEnvironment
 
 
 @tagged('post_install', '-at_install')
@@ -32,7 +33,7 @@ class TestResCompany(common.AfipwsCase):
             self.connection.expirationtime = now - timedelta(seconds=1)
             create.return_value = self.connection
             self.assertEqual(self.company.get_connection('ws_sr_padron_a5'), self.connection)
-            create.assert_called_once_with('ws_sr_padron_a5', 'homologation')
+            create.assert_called_once_with('ws_sr_padron_a5', self.company.get_environment())
 
     def test_create_connection_normalizes_authentication_dates(self):
         auth = {
@@ -43,7 +44,7 @@ class TestResCompany(common.AfipwsCase):
         with patch.object(type(self.company), 'get_key_and_certificate',
                           return_value=('-----BEGIN PRIVATE KEY-----\nfake', 'fake-cert')), \
                 patch.object(type(self.company), 'authenticate', return_value=auth) as authenticate:
-            connection = self.company._create_connection('ws_sr_padron_a5', 'homologation')
+            connection = self.company._create_connection('ws_sr_padron_a5', self.company.get_environment())
         self.assertEqual(connection.generationtime, fields.Datetime.to_datetime('2026-01-01 12:00:00'))
         self.assertEqual(connection.expirationtime, fields.Datetime.to_datetime('2026-01-01 17:00:00'))
         self.assertEqual(authenticate.call_args.args[2], '-----BEGIN RSA PRIVATE KEY-----\nfake')
@@ -75,11 +76,11 @@ class TestResCompany(common.AfipwsCase):
         certificate = self.env['afipws.certificate'].create({
             'alias_id': self.alias.id, 'crt': 'fake-cert', 'state': 'confirmed',
         })
-        self.assertEqual(self.company.get_key_and_certificate('homologation'),
+        self.assertEqual(self.company.get_key_and_certificate(self.company.get_environment()),
                          ('fake-private-key', 'fake-cert'))
         certificate.copy({'state': 'confirmed'})
         with self.assertRaises(UserError):
-            self.company.get_key_and_certificate('homologation')
+            self.company.get_key_and_certificate(self.company.get_environment())
 
     def test_environment_config_fallback(self):
         self.env['ir.config_parameter'].set_param('afip.ws.env.type', 'invalid')
@@ -88,7 +89,8 @@ class TestResCompany(common.AfipwsCase):
                 self.assertEqual(self.company.get_environment().type, expected)
 
     def test_certificate_files_and_failures(self):
-        for environment, prefix in [('production', 'afip_prod'), ('homologation', 'afip_homo')]:
+        for environment_type, prefix in [('production', 'afip_prod'), ('homologation', 'afip_homo')]:
+            environment = AfipEnvironment(environment_type)
             with self.subTest(environment=environment), TemporaryDirectory() as directory:
                 key, cert = Path(directory) / 'key', Path(directory) / 'cert'
                 config = {prefix + '_pkey_file': str(key), prefix + '_cert_file': str(cert)}
@@ -110,16 +112,16 @@ class TestResCompany(common.AfipwsCase):
                                 self.assertRaisesRegex(UserError, 'Could not read %s file' % unreadable_path):
                             self.company.get_key_and_certificate(environment)
         with patch.object(res_company.tools, 'config', {}), self.assertRaises(UserError):
-            self.company.get_key_and_certificate('homologation')
+            self.company.get_key_and_certificate(self.company.get_environment())
 
     def test_create_connection_with_rsa_key(self):
         auth = dict(uniqueid='1', token='t', sign='s', generationtime='2026-01-01T12:00:00Z',
                     expirationtime='2026-01-01T17:00:00Z')
         with patch.object(type(self.company), 'get_key_and_certificate', return_value=('RSA key', 'crt')), \
                 patch.object(type(self.company), 'authenticate', return_value=auth) as authenticate:
-            connection = self.company._create_connection('wsfecred', 'production')
+            connection = self.company._create_connection('wsfecred', self.company.get_environment())
         self.assertEqual(authenticate.call_args.args[2], 'RSA key')
-        self.assertEqual(connection.type, 'production')
+        self.assertEqual(connection.type, self.company.get_environment().type)
 
     def test_authentication_default_cache_expiration_and_unparsed_error(self):
         wsaa = Mock(Excepcion='')

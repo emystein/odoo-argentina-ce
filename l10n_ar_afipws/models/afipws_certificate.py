@@ -138,12 +138,12 @@ class AfipwsCertificate(models.Model):
             [
                 ("state", "=", "confirmed"),
                 ("alias_id.company_id", "=", company_id),
-                ("alias_id.type", "=", environment),
+                ("alias_id.type", "=", environment.type),
             ]
         )
         if len(certificate) > 1:
             raise UserError(
                 _('Tiene más de un certificado de "%s" confirmado. Por favor deje un solo certificado de "%s" confirmado.')
-                % (environment, environment)
+                % (environment.type, environment.type)
             )
         return certificate
