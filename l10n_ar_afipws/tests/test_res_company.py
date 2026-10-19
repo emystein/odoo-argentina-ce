@@ -16,9 +16,9 @@ from ..models import res_company
 @tagged('post_install', '-at_install')
 class TestResCompany(common.AfipwsCase):
     def test_environment_parameter(self):
-        self.assertEqual(self.company._get_environment_type(), 'homologation')
+        self.assertEqual(self.company.get_environment().type, 'homologation')
         self.env['ir.config_parameter'].sudo().set_param('afip.ws.env.type', 'production')
-        self.assertEqual(self.company._get_environment_type(), 'production')
+        self.assertEqual(self.company.get_environment().type, 'production')
 
     def test_reuse_valid_connection_and_replace_expired(self):
         now = fields.Datetime.now()
@@ -85,7 +85,7 @@ class TestResCompany(common.AfipwsCase):
         self.env['ir.config_parameter'].set_param('afip.ws.env.type', 'invalid')
         for mode, expected in [(None, 'production'), ('production', 'production'), ('develop', 'homologation')]:
             with self.subTest(mode=mode), patch.object(res_company.tools, 'config', {'server_mode': mode}):
-                self.assertEqual(self.company._get_environment_type(), expected)
+                self.assertEqual(self.company.get_environment().type, expected)
 
     def test_certificate_files_and_failures(self):
         for environment, prefix in [('production', 'afip_prod'), ('homologation', 'afip_homo')]:

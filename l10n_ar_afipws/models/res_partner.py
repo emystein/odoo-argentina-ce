@@ -96,13 +96,13 @@ class ResPartner(models.Model):
         # if there is certificate for user company, use that one, if not
         # use the company for the first certificate found
         company = self.env.user.company_id
-        env_type = company._get_environment_type()
+        environment = company.get_environment()
         try:
-            certificate = company.get_key_and_certificate(company._get_environment_type())
+            certificate = company.get_key_and_certificate(environment.type)
         except Exception:
             certificate = self.env["afipws.certificate"].search(
                 [
-                    ("alias_id.type", "=", env_type),
+                    ("alias_id.type", "=", environment.type),
                     ("state", "=", "confirmed"),
                 ],
                 limit=1,

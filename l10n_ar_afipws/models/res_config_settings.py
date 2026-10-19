@@ -25,7 +25,7 @@ class ResConfigSettings(models.TransientModel):
         for settings in self:
             settings.arca_certificate_id = self.env["afipws.certificate"].search([
                 ("alias_id.company_id", "=", settings.company_id.id),
-                ("alias_id.type", "=", settings.afip_ws_env_type or settings.company_id._get_environment_type()),
+                ("alias_id.type", "=", settings.afip_ws_env_type or settings.company_id.get_environment().type),
                 ("state", "=", "confirmed"),
             ], limit=1)
 
@@ -37,7 +37,7 @@ class ResConfigSettings(models.TransientModel):
             "domain": [("company_id", "=", self.company_id.id)],
             "context": {
                 "default_company_id": self.company_id.id,
-                "default_type": self.afip_ws_env_type or self.company_id._get_environment_type(),
+                "default_type": self.afip_ws_env_type or self.company_id.get_environment().type,
             },
         })
         return action

@@ -16,6 +16,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 import odoo.tools as tools
 
+from ..tools.afip_environment import AfipEnvironment
 from ..tools.key_and_certificate import KeyAndCertificate
 
 _logger = logging.getLogger(__name__)
@@ -36,30 +37,11 @@ class ResCompany(models.Model):
     )
 
     @api.model
-    def _get_environment_type(self):
-        """
-        Function to define homologation/production environment
-        First it search for a paramter "afip.ws.env.type" if exists and:
-        * is production --> production
-        * is homologation --> homologation
-        Else
-        Search for 'server_mode' parameter on conf file. If that parameter is:
-        * 'test' or 'develop' -->  homologation
-        * other or no parameter -->  production
-        """
-        parameter_env_type = self.env["ir.config_parameter"].sudo().get_param("afip.ws.env.type")
-        if parameter_env_type == "production":
-            environment_type = "production"
-        elif parameter_env_type == "homologation":
-            environment_type = "homologation"
-        else:
-            server_mode = tools.config.get("server_mode")
-            if not server_mode or server_mode == "production":
-                environment_type = "production"
-            else:
-                environment_type = "homologation"
-        _logger.info("Running arg electronic invoice on %s mode" % environment_type)
-        return environment_type
+    def get_environment(self):
+        return AfipEnvironment.with_parameter_repository(self.parameter_repository())
+
+    def parameter_repository(self):
+        return self.env["ir.config_parameter"]
 
     def get_key_and_certificate(self, environment_type):
         """
@@ -89,11 +71,11 @@ class ResCompany(models.Model):
         self.ensure_one()
         _logger.info("Getting connection for company %s and ws %s" % (self.name, afip_ws))
         now = fields.Datetime.now()
-        environment_type = self._get_environment_type()
+        environment = self.get_environment()
 
         connection = self.connection_ids.search(
             [
-                ("type", "=", environment_type),
+                ("type", "=", environment.type),
                 ("generationtime", "<=", now),
                 ("expirationtime", ">", now),
                 ("afip_ws", "=", afip_ws),
@@ -102,7 +84,7 @@ class ResCompany(models.Model):
             limit=1,
         )
         if not connection:
-            connection = self._create_connection(afip_ws, environment_type)
+            connection = self._create_connection(afip_ws, environment.type)
         return connection
 
     def _create_connection(self, afip_ws, environment_type):
