@@ -16,6 +16,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 import odoo.tools as tools
 
+from ..exceptions import NotConfirmedCertificate
 from ..tools.afip_environment import AfipEnvironment
 from ..tools.key_and_certificate import KeyAndCertificate
 
@@ -49,16 +50,14 @@ class ResCompany(models.Model):
         * en registros de esta misma clase
         """
         self.ensure_one()
-        environment = self.get_environment()
         certificate_repository = self.afip_certificate_repository()
         key_and_certificate = (
             certificate_repository.find_confirmed_by_company(self)
             .map(KeyAndCertificate.from_certificate)
-            .default_with(lambda: KeyAndCertificate.from_configuration(environment))
+            .default_with(lambda: KeyAndCertificate.from_configuration_for_company(self))
         )
         if key_and_certificate.are_empty():
-            msg = _("Not confirmed certificate for %s on company %s") % (environment.type, self.name)
-            raise UserError(msg)
+            raise NotConfirmedCertificate.in_company(self)
         return key_and_certificate.as_tuple()
 
     def get_connection(self, afip_ws):

@@ -17,7 +17,8 @@ class KeyAndCertificate():
         return credentials
 
     @staticmethod
-    def from_configuration(environment):
+    def from_configuration_for_company(company):
+        environment = company.get_environment()
         credentials = KeyAndCertificate.from_environment_configuration(environment)
         _logger.info("Using odoo conf certificates")
         return credentials
