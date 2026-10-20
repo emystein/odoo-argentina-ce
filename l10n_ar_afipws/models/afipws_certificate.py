@@ -133,11 +133,12 @@ class AfipwsCertificate(models.Model):
         self.ensure_one()
         return KeyAndCertificate(self.alias_id.key, self.crt)
 
-    def find_confirmed_by_company_id_and_environment(self, company_id, environment):
+    def find_confirmed_by_company(self, company):
+        environment = company.get_environment()
         certificate = self.search(
             [
                 ("state", "=", "confirmed"),
-                ("alias_id.company_id", "=", company_id),
+                ("alias_id.company_id", "=", company.id),
                 ("alias_id.type", "=", environment.type),
             ]
         )

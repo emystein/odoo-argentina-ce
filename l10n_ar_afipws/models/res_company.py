@@ -52,7 +52,7 @@ class ResCompany(models.Model):
         environment = self.get_environment()
         key_and_certificate = KeyAndCertificate.empty()
         certificate_repository = self.afip_certificate_repository()
-        certificate = certificate_repository.find_confirmed_by_company_id_and_environment(self.id, environment)
+        certificate = certificate_repository.find_confirmed_by_company(self)
         if certificate:
             key_and_certificate = certificate.key_and_certificate()
             _logger.info("Using DB certificates")
