@@ -60,15 +60,15 @@ class TestResCompany(common.AfipwsCase):
             'generationtime': now - timedelta(hours=1),
             'expirationtime': now + timedelta(hours=1),
         })
-        with patch.object(res_company, 'AfipConnectionAttempt') as attempt:
+        with patch.object(res_company, 'AfipWsConnectionAttempt') as attempt:
             self.assertEqual(self.company.get_connection('ws_sr_padron_a5'), self.connection)
             attempt.assert_not_called()
             self.connection.expirationtime = now - timedelta(seconds=1)
             replacement = self.connection.copy()
             attempt.return_value.connect.return_value = replacement
             self.assertEqual(self.company.get_connection('ws_sr_padron_a5'), replacement)
-            attempt.assert_called_once_with(self.company, 'ws_sr_padron_a5')
-            attempt.return_value.connect.assert_called_once_with()
+            attempt.assert_called_once_with('ws_sr_padron_a5')
+            attempt.return_value.connect.assert_called_once_with(self.company)
 
     def test_get_connection_normalizes_authentication_dates(self):
         auth = {

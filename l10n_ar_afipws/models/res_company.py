@@ -17,7 +17,7 @@ from odoo.exceptions import UserError
 import odoo.tools as tools
 
 from ..exceptions import NotConfirmedCertificate
-from ..tools.afip_connection_attempt import AfipConnectionAttempt
+from ..tools.afipws_connection_attempt import AfipWsConnectionAttempt
 from ..tools.afip_environment import AfipEnvironment
 from ..tools.key_and_certificate import KeyAndCertificate
 
@@ -70,8 +70,8 @@ class ResCompany(models.Model):
             limit=1,
         )
         if not connection:
-            connection_attempt = AfipConnectionAttempt(self, afip_ws)
-            connection = connection_attempt.connect()
+            connection_attempt = AfipWsConnectionAttempt(afip_ws)
+            connection = connection_attempt.connect(self)
         return connection
 
     @api.model
