@@ -98,7 +98,7 @@ class ResPartner(models.Model):
         company = self.env.user.company_id
         environment = company.get_environment()
         try:
-            certificate = company.get_key_and_certificate(environment.type)
+            certificate = company.get_key_and_certificate()
         except Exception:
             certificate = self.env["afipws.certificate"].search(
                 [

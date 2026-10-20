@@ -40,7 +40,7 @@ class ResCompany(models.Model):
     def get_environment(self):
         return AfipEnvironment.with_parameter_repository(self.parameter_repository())
 
-    def get_key_and_certificate(self, environment):
+    def get_key_and_certificate(self):
         """
         Funcion que busca para el environment definido,
         una clave y un certificado en los siguientes lugares y segun estas
@@ -49,6 +49,7 @@ class ResCompany(models.Model):
         * en registros de esta misma clase
         """
         self.ensure_one()
+        environment = self.get_environment()
         key_and_certificate = KeyAndCertificate.empty()
         certificate_repository = self.afip_certificate_repository()
         certificate = certificate_repository.find_confirmed_by_company_id_and_environment(self.id, environment)
@@ -81,22 +82,23 @@ class ResCompany(models.Model):
             limit=1,
         )
         if not connection:
-            connection = self._create_connection(afip_ws, environment)
+            connection = self._create_connection(afip_ws)
         return connection
 
-    def _create_connection(self, afip_ws, environment):
+    def _create_connection(self, afip_ws):
         """
         This function should be called from get_connection. Not to be used
         directyl
         TODO ver si podemos usar metodos de pyafipws para esto
         """
         self.ensure_one()
+        environment = self.get_environment()
         _logger.info(
             "Creating connection for company %s, environment type %s and ws "
             "%s" % (self.name, environment.type, afip_ws)
         )
         login_url = self.env["afipws.connection"].get_afip_login_url(environment.type)
-        pkey, cert = self.get_key_and_certificate(environment)
+        pkey, cert = self.get_key_and_certificate()
         # because pyafipws wsaa loos for "BEGIN RSA PRIVATE KEY" we change key
         if pkey.startswith("-----BEGIN PRIVATE KEY-----"):
             pkey = pkey.replace(" PRIVATE KEY", " RSA PRIVATE KEY")

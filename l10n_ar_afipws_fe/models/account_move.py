@@ -158,7 +158,7 @@ class AccountMove(models.Model):
                 # we validate only locally
                 if validation_type == "homologation":
                     try:
-                        rec.company_id.get_key_and_certificate(validation_type)
+                        rec.company_id.get_key_and_certificate()
                     except Exception:
                         validation_type = False
                 rec.validation_type = validation_type
