@@ -17,6 +17,7 @@ from odoo.exceptions import UserError
 import odoo.tools as tools
 
 from ..exceptions import NotConfirmedCertificate
+from ..tools.afip_connection_attempt import AfipConnectionAttempt
 from ..tools.afip_environment import AfipEnvironment
 from ..tools.key_and_certificate import KeyAndCertificate
 
@@ -69,41 +70,9 @@ class ResCompany(models.Model):
             limit=1,
         )
         if not connection:
-            connection = self._create_connection(afip_ws)
+            connection_attempt = AfipConnectionAttempt(self, afip_ws)
+            connection = connection_attempt.connect()
         return connection
-
-    def _create_connection(self, afip_ws):
-        """
-        This function should be called from get_connection. Not to be used
-        directyl
-        TODO ver si podemos usar metodos de pyafipws para esto
-        """
-        self.ensure_one()
-        environment = self.get_environment()
-        _logger.info(
-            "Creating connection for company %s, environment type %s and ws "
-            "%s" % (self.name, environment.type, afip_ws)
-        )
-        login_url = self.afip_connection_repository().get_afip_login_url(environment.type)
-        key_and_certificate = self.get_key_and_certificate()
-        auth_data = self.authenticate(afip_ws, key_and_certificate, wsdl=login_url)
-        auth_data.update(
-            {
-                "company_id": self.id,
-                "afip_ws": afip_ws,
-                "type": environment.type,
-            }
-        )
-
-        auth_data["generationtime"] = (
-            dateutil.parser.parse(auth_data["generationtime"]).astimezone(pytz.utc).replace(tzinfo=None)
-        )
-        auth_data["expirationtime"] = (
-            dateutil.parser.parse(auth_data["expirationtime"]).astimezone(pytz.utc).replace(tzinfo=None)
-        )
-
-        _logger.info("Successful Connection to AFIP.")
-        return self.connection_ids.create(auth_data)
 
     @api.model
     def authenticate(

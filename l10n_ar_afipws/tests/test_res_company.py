@@ -60,15 +60,17 @@ class TestResCompany(common.AfipwsCase):
             'generationtime': now - timedelta(hours=1),
             'expirationtime': now + timedelta(hours=1),
         })
-        with patch.object(type(self.company), '_create_connection') as create:
+        with patch.object(res_company, 'AfipConnectionAttempt') as attempt:
             self.assertEqual(self.company.get_connection('ws_sr_padron_a5'), self.connection)
-            create.assert_not_called()
+            attempt.assert_not_called()
             self.connection.expirationtime = now - timedelta(seconds=1)
-            create.return_value = self.connection
-            self.assertEqual(self.company.get_connection('ws_sr_padron_a5'), self.connection)
-            create.assert_called_once_with('ws_sr_padron_a5')
+            replacement = self.connection.copy()
+            attempt.return_value.connect.return_value = replacement
+            self.assertEqual(self.company.get_connection('ws_sr_padron_a5'), replacement)
+            attempt.assert_called_once_with(self.company, 'ws_sr_padron_a5')
+            attempt.return_value.connect.assert_called_once_with()
 
-    def test_create_connection_normalizes_authentication_dates(self):
+    def test_get_connection_normalizes_authentication_dates(self):
         auth = {
             'uniqueid': '123', 'token': 'token', 'sign': 'sign',
             'generationtime': '2026-01-01T09:00:00-03:00',
@@ -77,7 +79,7 @@ class TestResCompany(common.AfipwsCase):
         with patch.object(type(self.company), 'get_key_and_certificate',
                           return_value=KeyAndCertificate('-----BEGIN PRIVATE KEY-----\nfake', 'fake-cert')), \
                 patch.object(type(self.company), 'authenticate', return_value=auth) as authenticate:
-            connection = self.company._create_connection('ws_sr_padron_a5')
+            connection = self.company.get_connection('ws_sr_padron_a5')
         self.assertEqual(connection.generationtime, fields.Datetime.to_datetime('2026-01-01 12:00:00'))
         self.assertEqual(connection.expirationtime, fields.Datetime.to_datetime('2026-01-01 17:00:00'))
         self.assertEqual(authenticate.call_args.args[1].key, '-----BEGIN RSA PRIVATE KEY-----\nfake')
@@ -157,12 +159,12 @@ class TestResCompany(common.AfipwsCase):
         with patch.object(res_company.tools, 'config', {}), self.assertRaises(NotConfirmedCertificate):
             self.company.get_key_and_certificate()
 
-    def test_create_connection_with_rsa_key(self):
+    def test_get_connection_with_rsa_key(self):
         auth = dict(uniqueid='1', token='t', sign='s', generationtime='2026-01-01T12:00:00Z',
                     expirationtime='2026-01-01T17:00:00Z')
         with patch.object(type(self.company), 'get_key_and_certificate', return_value=KeyAndCertificate('RSA key', 'crt')), \
                 patch.object(type(self.company), 'authenticate', return_value=auth) as authenticate:
-            connection = self.company._create_connection('wsfecred')
+            connection = self.company.get_connection('wsfecred')
         self.assertEqual(authenticate.call_args.args[1].key, 'RSA key')
         self.assertEqual(connection.type, self.company.get_environment().type)
 
