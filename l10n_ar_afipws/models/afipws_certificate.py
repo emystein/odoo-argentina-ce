@@ -5,6 +5,8 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+from expression import Nothing, Some
+
 from OpenSSL import crypto
 import base64
 import logging
@@ -134,6 +136,7 @@ class AfipwsCertificate(models.Model):
         return KeyAndCertificate(self.alias_id.key, self.crt)
 
     def find_confirmed_by_company(self, company):
+        """Return the company's confirmed certificate wrapped in an Option."""
         environment = company.get_environment()
         certificate = self.search(
             [
@@ -147,4 +150,4 @@ class AfipwsCertificate(models.Model):
                 _('Tiene más de un certificado de "%s" confirmado. Por favor deje un solo certificado de "%s" confirmado.')
                 % (environment.type, environment.type)
             )
-        return certificate
+        return Some(certificate) if certificate else Nothing

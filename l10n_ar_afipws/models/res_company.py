@@ -50,16 +50,12 @@ class ResCompany(models.Model):
         """
         self.ensure_one()
         environment = self.get_environment()
-        key_and_certificate = KeyAndCertificate.empty()
         certificate_repository = self.afip_certificate_repository()
-        certificate = certificate_repository.find_confirmed_by_company(self)
-        if certificate:
-            key_and_certificate = certificate.key_and_certificate()
-            _logger.info("Using DB certificates")
-        # not certificate on bd, we search on odoo conf file
-        else:
-            key_and_certificate = KeyAndCertificate.from_environment_configuration(environment)
-            _logger.info("Using odoo conf certificates")
+        key_and_certificate = (
+            certificate_repository.find_confirmed_by_company(self)
+            .map(KeyAndCertificate.from_certificate)
+            .default_with(lambda: KeyAndCertificate.from_configuration(environment))
+        )
         if key_and_certificate.are_empty():
             msg = _("Not confirmed certificate for %s on company %s") % (environment.type, self.name)
             raise UserError(msg)

@@ -1,7 +1,9 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import base64
 
 from odoo.exceptions import UserError
+
+from expression import Nothing, Option
 from odoo.tests import tagged
 
 from . import common
@@ -10,6 +12,22 @@ from ..models import afipws_certificate
 
 @tagged('post_install', '-at_install')
 class TestAfipwsCertificate(common.AfipwsCase):
+    def test_find_confirmed_by_company_returns_option(self):
+        repository = self.env['afipws.certificate']
+        fallback = Mock(return_value=None)
+        result = repository.find_confirmed_by_company(self.company)
+        self.assertIsInstance(result, Option)
+        self.assertEqual(result, Nothing)
+        self.assertIsNone(result.default_with(fallback))
+        fallback.assert_called_once_with()
+
+        certificate = self.certificate(state='confirmed', crt='db-certificate')
+        fallback.reset_mock()
+        result = repository.find_confirmed_by_company(self.company)
+        self.assertIsInstance(result, Option)
+        self.assertEqual(result.default_with(fallback), certificate)
+        fallback.assert_not_called()
+
     def test_certificate_request_download_and_draft_guard(self):
         certificate = self.env['afipws.certificate'].create({
             'alias_id': self.alias.id, 'csr': 'mock csr',

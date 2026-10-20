@@ -16,6 +16,18 @@ from ..tools.afip_environment import AfipEnvironment
 
 @tagged('post_install', '-at_install')
 class TestResCompany(common.AfipwsCase):
+    def test_empty_key_and_certificate(self):
+        credentials = res_company.KeyAndCertificate.empty()
+        self.assertTrue(credentials.are_empty())
+        self.assertEqual(credentials.as_tuple(), (None, None))
+
+    def test_database_certificate_skips_configuration(self):
+        self.certificate(state='confirmed', crt='db-certificate')
+        with patch.object(res_company.KeyAndCertificate, 'from_environment_configuration') as fallback:
+            self.assertEqual(self.company.get_key_and_certificate(),
+                             ('fake-private-key', 'db-certificate'))
+        fallback.assert_not_called()
+
     def test_environment_equality(self):
         production = AfipEnvironment('production')
         self.assertEqual(production, AfipEnvironment('production'))

@@ -1,10 +1,26 @@
+import logging
+
 from .afip_configuration_parameters import AfipConfigurationParameters
 from .files import read_file
+
+_logger = logging.getLogger(__name__)
 
 class KeyAndCertificate():
     @staticmethod
     def empty():
         return KeyAndCertificate(None, None)
+
+    @staticmethod
+    def from_certificate(certificate):
+        credentials = certificate.key_and_certificate()
+        _logger.info("Using DB certificates")
+        return credentials
+
+    @staticmethod
+    def from_configuration(environment):
+        credentials = KeyAndCertificate.from_environment_configuration(environment)
+        _logger.info("Using odoo conf certificates")
+        return credentials
 
     @staticmethod
     def from_environment_configuration(environment):
