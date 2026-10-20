@@ -13,6 +13,7 @@ from . import common
 from ..exceptions import NotConfirmedCertificate
 from ..models import res_company
 from ..tools.afip_environment import AfipEnvironment
+from ..tools.key_and_certificate import KeyAndCertificate
 
 
 @tagged('post_install', '-at_install')
@@ -25,8 +26,10 @@ class TestResCompany(common.AfipwsCase):
     def test_database_certificate_skips_configuration(self):
         self.certificate(state='confirmed', crt='db-certificate')
         with patch.object(res_company.KeyAndCertificate, 'from_environment_configuration') as fallback:
-            self.assertEqual(self.company.get_key_and_certificate(),
-                             ('fake-private-key', 'db-certificate'))
+            credentials = self.company.get_key_and_certificate()
+            self.assertIsInstance(credentials, KeyAndCertificate)
+            self.assertEqual(credentials.key, 'fake-private-key')
+            self.assertEqual(credentials.cert, 'db-certificate')
         fallback.assert_not_called()
 
     def test_environment_equality(self):
@@ -63,7 +66,7 @@ class TestResCompany(common.AfipwsCase):
             'expirationtime': '2026-01-01T14:00:00-03:00',
         }
         with patch.object(type(self.company), 'get_key_and_certificate',
-                          return_value=('-----BEGIN PRIVATE KEY-----\nfake', 'fake-cert')), \
+                          return_value=KeyAndCertificate('-----BEGIN PRIVATE KEY-----\nfake', 'fake-cert')), \
                 patch.object(type(self.company), 'authenticate', return_value=auth) as authenticate:
             connection = self.company._create_connection('ws_sr_padron_a5')
         self.assertEqual(connection.generationtime, fields.Datetime.to_datetime('2026-01-01 12:00:00'))
@@ -97,8 +100,10 @@ class TestResCompany(common.AfipwsCase):
         certificate = self.env['afipws.certificate'].create({
             'alias_id': self.alias.id, 'crt': 'fake-cert', 'state': 'confirmed',
         })
-        self.assertEqual(self.company.get_key_and_certificate(),
-                         ('fake-private-key', 'fake-cert'))
+        credentials = self.company.get_key_and_certificate()
+        self.assertIsInstance(credentials, KeyAndCertificate)
+        self.assertEqual(credentials.key, 'fake-private-key')
+        self.assertEqual(credentials.cert, 'fake-cert')
         certificate.copy({'state': 'confirmed'})
         with self.assertRaises(UserError):
             self.company.get_key_and_certificate()
@@ -125,7 +130,10 @@ class TestResCompany(common.AfipwsCase):
                                      % (environment.type, self.company.name))
                     key.write_text('private key')
                     cert.write_text('certificate')
-                    self.assertEqual(self.company.get_key_and_certificate(), ('private key', 'certificate'))
+                    credentials = self.company.get_key_and_certificate()
+                    self.assertIsInstance(credentials, KeyAndCertificate)
+                    self.assertEqual(credentials.key, 'private key')
+                    self.assertEqual(credentials.cert, 'certificate')
                     real_open = open
                     for unreadable_path in (key, cert):
                         def open_file(path, *args, **kwargs):
@@ -143,7 +151,7 @@ class TestResCompany(common.AfipwsCase):
     def test_create_connection_with_rsa_key(self):
         auth = dict(uniqueid='1', token='t', sign='s', generationtime='2026-01-01T12:00:00Z',
                     expirationtime='2026-01-01T17:00:00Z')
-        with patch.object(type(self.company), 'get_key_and_certificate', return_value=('RSA key', 'crt')), \
+        with patch.object(type(self.company), 'get_key_and_certificate', return_value=KeyAndCertificate('RSA key', 'crt')), \
                 patch.object(type(self.company), 'authenticate', return_value=auth) as authenticate:
             connection = self.company._create_connection('wsfecred')
         self.assertEqual(authenticate.call_args.args[2], 'RSA key')

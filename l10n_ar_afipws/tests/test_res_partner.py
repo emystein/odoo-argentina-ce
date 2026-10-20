@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 from odoo.exceptions import UserError
 from odoo.tests import tagged
 
+from ..tools.key_and_certificate import KeyAndCertificate
 from . import common
 
 
@@ -51,7 +52,7 @@ class TestResPartner(common.AfipwsCase):
         with patch.object(type(partner), 'ensure_vat', return_value='30714295698'), \
                 patch.object(type(self.company), 'get_connection', return_value=self.connection), \
                 patch.object(type(self.connection), 'connect', return_value=ws), \
-                patch.object(type(self.company), 'get_key_and_certificate', return_value=('key', 'crt')):
+                patch.object(type(self.company), 'get_key_and_certificate', return_value=KeyAndCertificate('key', 'crt')):
             self.assertEqual(partner.get_data_from_padron_afip()['name'], 'EMPRESA TEST')
             ws.Consultar.assert_called_once_with('30714295698')
             ws.Consultar.side_effect = RuntimeError('service error')

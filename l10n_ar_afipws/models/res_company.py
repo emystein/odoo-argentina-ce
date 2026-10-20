@@ -42,13 +42,6 @@ class ResCompany(models.Model):
         return AfipEnvironment.with_parameter_repository(self.parameter_repository())
 
     def get_key_and_certificate(self):
-        """
-        Funcion que busca para el environment definido,
-        una clave y un certificado en los siguientes lugares y segun estas
-        prioridades:
-        * en el conf del server de odoo
-        * en registros de esta misma clase
-        """
         self.ensure_one()
         certificate_repository = self.afip_certificate_repository()
         key_and_certificate = (
@@ -58,7 +51,7 @@ class ResCompany(models.Model):
         )
         if key_and_certificate.are_empty():
             raise NotConfirmedCertificate.in_company(self)
-        return key_and_certificate.as_tuple()
+        return key_and_certificate
 
     def get_connection(self, afip_ws):
         self.ensure_one()
@@ -93,7 +86,8 @@ class ResCompany(models.Model):
             "%s" % (self.name, environment.type, afip_ws)
         )
         login_url = self.env["afipws.connection"].get_afip_login_url(environment.type)
-        pkey, cert = self.get_key_and_certificate()
+        key_and_certificate = self.get_key_and_certificate()
+        pkey, cert = key_and_certificate.key, key_and_certificate.cert
         # because pyafipws wsaa loos for "BEGIN RSA PRIVATE KEY" we change key
         if pkey.startswith("-----BEGIN PRIVATE KEY-----"):
             pkey = pkey.replace(" PRIVATE KEY", " RSA PRIVATE KEY")
