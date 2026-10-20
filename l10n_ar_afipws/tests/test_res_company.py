@@ -18,6 +18,15 @@ from ..tools.key_and_certificate import KeyAndCertificate
 
 @tagged('post_install', '-at_install')
 class TestResCompany(common.AfipwsCase):
+    def test_key_and_certificate_normalizes_private_key(self):
+        key = '-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----'
+        normalized = '-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----'
+        credentials = KeyAndCertificate(key, 'certificate')
+        self.assertEqual(credentials.key, normalized)
+        self.assertEqual(credentials.cert, 'certificate')
+        self.assertEqual(KeyAndCertificate(normalized, 'certificate').key, normalized)
+        self.assertFalse(KeyAndCertificate(False, 'certificate').key)
+
     def test_empty_key_and_certificate(self):
         credentials = res_company.KeyAndCertificate.empty()
         self.assertTrue(credentials.are_empty())
@@ -71,7 +80,7 @@ class TestResCompany(common.AfipwsCase):
             connection = self.company._create_connection('ws_sr_padron_a5')
         self.assertEqual(connection.generationtime, fields.Datetime.to_datetime('2026-01-01 12:00:00'))
         self.assertEqual(connection.expirationtime, fields.Datetime.to_datetime('2026-01-01 17:00:00'))
-        self.assertEqual(authenticate.call_args.args[2], '-----BEGIN RSA PRIVATE KEY-----\nfake')
+        self.assertEqual(authenticate.call_args.args[1].key, '-----BEGIN RSA PRIVATE KEY-----\nfake')
 
     def test_authenticate_and_reuse_cached_ticket(self):
         wsaa = Mock(Excepcion='')
@@ -80,8 +89,8 @@ class TestResCompany(common.AfipwsCase):
                 'generationTime': '2026-01-01T12:00:00Z', 'expirationTime': '2026-01-01T17:00:00Z'}
         wsaa.ObtenerTagXml.side_effect = tags.__getitem__
         with TemporaryDirectory() as directory, patch.dict('sys.modules', {'pyafipws.wsaa': SimpleNamespace(WSAA=Mock(return_value=wsaa))}):
-            first = self.company.authenticate('ws_sr_padron_a5', 'cert', 'key', cache=directory)
-            second = self.company.authenticate('ws_sr_padron_a5', 'cert', 'key', cache=directory)
+            first = self.company.authenticate('ws_sr_padron_a5', KeyAndCertificate('key', 'cert'), cache=directory)
+            second = self.company.authenticate('ws_sr_padron_a5', KeyAndCertificate('key', 'cert'), cache=directory)
         self.assertEqual(first, second)
         self.assertEqual(first['token'], 'token')
         self.assertEqual(first['uniqueid'], '42')
@@ -94,7 +103,7 @@ class TestResCompany(common.AfipwsCase):
         wsaa.LoginCMS.return_value = ''
         with TemporaryDirectory() as directory, patch.dict('sys.modules', {'pyafipws.wsaa': SimpleNamespace(WSAA=Mock(return_value=wsaa))}), \
                 self.assertRaisesRegex(UserError, 'AFIP mock failure'):
-            self.company.authenticate('ws_sr_padron_a5', 'cert', 'key', cache=directory)
+            self.company.authenticate('ws_sr_padron_a5', KeyAndCertificate('key', 'cert'), cache=directory)
 
     def test_certificate_selection_and_duplicate_rejection(self):
         certificate = self.env['afipws.certificate'].create({
@@ -154,7 +163,7 @@ class TestResCompany(common.AfipwsCase):
         with patch.object(type(self.company), 'get_key_and_certificate', return_value=KeyAndCertificate('RSA key', 'crt')), \
                 patch.object(type(self.company), 'authenticate', return_value=auth) as authenticate:
             connection = self.company._create_connection('wsfecred')
-        self.assertEqual(authenticate.call_args.args[2], 'RSA key')
+        self.assertEqual(authenticate.call_args.args[1].key, 'RSA key')
         self.assertEqual(connection.type, self.company.get_environment().type)
 
     def test_authentication_default_cache_expiration_and_unparsed_error(self):
@@ -164,11 +173,11 @@ class TestResCompany(common.AfipwsCase):
         with TemporaryDirectory() as directory, \
                 patch.dict('sys.modules', {'pyafipws.wsaa': SimpleNamespace(WSAA=Mock(return_value=wsaa))}), \
                 patch.object(res_company.tools, 'config', {'data_dir': directory}):
-            self.assertEqual(self.company.authenticate('service', 'crt', 'key')['token'], 'mock')
+            self.assertEqual(self.company.authenticate('service', KeyAndCertificate('key', 'crt'))['token'], 'mock')
             ticket = next((Path(directory) / 'pyafipws_cache').glob('*.xml'))
             os.utime(ticket, (0, 0))
-            self.company.authenticate('service', 'crt', 'key')
+            self.company.authenticate('service', KeyAndCertificate('key', 'crt'))
             self.assertEqual(wsaa.LoginCMS.call_count, 2)
             wsaa.AnalizarXml.side_effect = ValueError('invalid ticket')
             with self.assertRaisesRegex(UserError, 'invalid ticket'):
-                self.company.authenticate('service', 'crt', 'key')
+                self.company.authenticate('service', KeyAndCertificate('key', 'crt'))

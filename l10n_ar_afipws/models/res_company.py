@@ -58,7 +58,6 @@ class ResCompany(models.Model):
         _logger.info("Getting connection for company %s and ws %s" % (self.name, afip_ws))
         now = fields.Datetime.now()
         environment = self.get_environment()
-
         connection = self.connection_ids.search(
             [
                 ("type", "=", environment.type),
@@ -85,13 +84,9 @@ class ResCompany(models.Model):
             "Creating connection for company %s, environment type %s and ws "
             "%s" % (self.name, environment.type, afip_ws)
         )
-        login_url = self.env["afipws.connection"].get_afip_login_url(environment.type)
+        login_url = self.afip_connection_repository().get_afip_login_url(environment.type)
         key_and_certificate = self.get_key_and_certificate()
-        pkey, cert = key_and_certificate.key, key_and_certificate.cert
-        # because pyafipws wsaa loos for "BEGIN RSA PRIVATE KEY" we change key
-        if pkey.startswith("-----BEGIN PRIVATE KEY-----"):
-            pkey = pkey.replace(" PRIVATE KEY", " RSA PRIVATE KEY")
-        auth_data = self.authenticate(afip_ws, cert, pkey, wsdl=login_url)
+        auth_data = self.authenticate(afip_ws, key_and_certificate, wsdl=login_url)
         auth_data.update(
             {
                 "company_id": self.id,
@@ -114,8 +109,7 @@ class ResCompany(models.Model):
     def authenticate(
         self,
         service,
-        certificate,
-        private_key,
+        key_and_certificate,
         force=False,
         cache="",
         wsdl="",
@@ -137,7 +131,9 @@ class ResCompany(models.Model):
         DEFAULT_TTL = 60 * 60 * 5
 
         # make md5 hash of the parameter for caching...
-        fn = "%s.xml" % hashlib.md5((service + certificate + private_key).encode("utf-8")).hexdigest()
+        fn = "%s.xml" % hashlib.md5(
+            (service + key_and_certificate.cert + key_and_certificate.key).encode("utf-8")
+        ).hexdigest()
         if not cache:
             cache = os.path.join(tools.config['data_dir'], 'pyafipws_cache')
             os.makedirs(cache, exist_ok=True)
@@ -150,7 +146,7 @@ class ResCompany(models.Model):
                 # ticket (TRA)
                 tra = wsaa.CreateTRA(service=service, ttl=DEFAULT_TTL)
                 # cryptographically sing the access ticket
-                cms = wsaa.SignTRA(tra, certificate, private_key)
+                cms = wsaa.SignTRA(tra, key_and_certificate.cert, key_and_certificate.key)
                 # connect to the webservice:
                 wsaa.Conectar(cache, wsdl, proxy)
                 # call the remote method
@@ -192,3 +188,5 @@ class ResCompany(models.Model):
     def afip_certificate_repository(self):
         return self.env["afipws.certificate"]
 
+    def afip_connection_repository(self):
+        return self.env["afipws.connection"]

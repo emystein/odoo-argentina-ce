@@ -37,6 +37,9 @@ class KeyAndCertificate():
         return KeyAndCertificate(pkey, cert)
 
     def __init__(self, key, cert):
+        # pyafipws WSAA looks for "BEGIN RSA PRIVATE KEY".
+        if key and key.startswith("-----BEGIN PRIVATE KEY-----"):
+            key = key.replace(" PRIVATE KEY", " RSA PRIVATE KEY")
         self.key = key
         self.cert = cert
 
