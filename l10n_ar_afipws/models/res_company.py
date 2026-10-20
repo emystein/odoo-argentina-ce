@@ -60,7 +60,7 @@ class ResCompany(models.Model):
         else:
             key_and_certificate = KeyAndCertificate.from_environment_configuration(environment)
             _logger.info("Using odoo conf certificates")
-        if key_and_certificate.is_empty():
+        if key_and_certificate.are_empty():
             msg = _("Not confirmed certificate for %s on company %s") % (environment.type, self.name)
             raise UserError(msg)
         return key_and_certificate.as_tuple()

@@ -23,7 +23,7 @@ class KeyAndCertificate():
         self.key = key
         self.cert = cert
 
-    def is_empty(self):
+    def are_empty(self):
         return not self.key or not self.cert
 
     def as_tuple(self):
